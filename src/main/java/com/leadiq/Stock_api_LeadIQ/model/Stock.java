@@ -1,17 +1,16 @@
 package com.leadiq.Stock_api_LeadIQ.model;
 
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import lombok.Data;
-
-import javax.persistence.*;
+import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "stocks")
-@Data 
+@Data
 @NoArgsConstructor
-@AllArgsConstructor 
+@AllArgsConstructor
 public class Stock {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
