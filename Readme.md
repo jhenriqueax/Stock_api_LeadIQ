@@ -130,7 +130,7 @@ USE stockdb;
 ### 2️ Configure `application.properties`
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/stockdb
-spring.datasource.username=root
+spring.datasource.username=YOUR_USER
 spring.datasource.password=YOUR_PASSWORD
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.database-platform=org.hibernate.dialect.MySQL8Dialect
