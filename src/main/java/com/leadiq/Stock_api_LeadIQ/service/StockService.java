@@ -9,9 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -47,7 +44,7 @@ public class StockService {
             List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
 
             for (Map<String, Object> result : results) {
-                // Polygon returns a timestamp (in milliseconds) for the date
+              
                 Long timestamp = ((Number) result.get("t")).longValue();
                 LocalDate date = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate();
 
@@ -57,10 +54,8 @@ public class StockService {
                 Double lowPrice = ((Number) result.get("l")).doubleValue();
                 Long volume = ((Number) result.get("v")).longValue();
 
-                // Gerar ID único baseado no símbolo e data
                 byte[] id = Stock.generateShortHash(companySymbol, date);
 
-                // Verifica se o registro já existe para evitar duplicação
                 if (!stockRepository.existsById(id)) {
                     Stock stock = new Stock(id, companySymbol, date, openPrice, closePrice, highPrice, lowPrice, volume);
                     stockRepository.save(stock);
@@ -76,9 +71,7 @@ public class StockService {
         }
     }
 
-    /**
-     * Retrieve stock data by company symbol and date.
-     */
+    
     public Stock getStockBySymbolAndDate(String companySymbol, String dateStr) {
         LocalDate date = LocalDate.parse(dateStr.trim());
         return stockRepository.findByCompanySymbolAndDate(companySymbol, date)
