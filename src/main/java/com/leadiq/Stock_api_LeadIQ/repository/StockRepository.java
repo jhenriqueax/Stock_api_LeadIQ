@@ -8,6 +8,6 @@ import org.springframework.stereotype.Repository;
 import com.leadiq.Stock_api_LeadIQ.model.Stock;
 
 @Repository
-public interface StockRepository extends JpaRepository<Stock, Long> {
+public interface StockRepository extends JpaRepository<Stock, byte[]> {
     Optional<Stock> findByCompanySymbolAndDate(String companySymbol, LocalDate date);
-}
+    }

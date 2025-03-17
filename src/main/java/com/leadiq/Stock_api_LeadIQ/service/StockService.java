@@ -3,13 +3,15 @@ package com.leadiq.Stock_api_LeadIQ.service;
 import com.leadiq.Stock_api_LeadIQ.exception.ApiException;
 import com.leadiq.Stock_api_LeadIQ.model.Stock;
 import com.leadiq.Stock_api_LeadIQ.repository.StockRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -30,9 +32,6 @@ public class StockService {
         this.restTemplate = new RestTemplate();
     }
 
-    /**
-     * Fetch stock data from Polygon.io API and store it in the database.
-     */
     public void fetchAndStoreStockData(String companySymbol, String fromDate, String toDate) {
         String url = String.format(
                 "https://api.polygon.io/v2/aggs/ticker/%s/range/1/day/%s/%s?apiKey=%s",
@@ -58,8 +57,14 @@ public class StockService {
                 Double lowPrice = ((Number) result.get("l")).doubleValue();
                 Long volume = ((Number) result.get("v")).longValue();
 
-                Stock stock = new Stock(companySymbol, date, openPrice, closePrice, highPrice, lowPrice, volume);
-                stockRepository.save(stock);
+                // Gerar ID único baseado no símbolo e data
+                byte[] id = Stock.generateShortHash(companySymbol, date);
+
+                // Verifica se o registro já existe para evitar duplicação
+                if (!stockRepository.existsById(id)) {
+                    Stock stock = new Stock(id, companySymbol, date, openPrice, closePrice, highPrice, lowPrice, volume);
+                    stockRepository.save(stock);
+                }
             }
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
@@ -75,7 +80,7 @@ public class StockService {
      * Retrieve stock data by company symbol and date.
      */
     public Stock getStockBySymbolAndDate(String companySymbol, String dateStr) {
-        LocalDate date = LocalDate.parse(dateStr);
+        LocalDate date = LocalDate.parse(dateStr.trim());
         return stockRepository.findByCompanySymbolAndDate(companySymbol, date)
                 .orElseThrow(() -> new ApiException("Stock data not found for " + companySymbol + " on " + date));
     }
