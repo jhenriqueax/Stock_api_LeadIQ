@@ -3,6 +3,7 @@ package com.leadiq.Stock_api_LeadIQ.service;
 import com.leadiq.Stock_api_LeadIQ.exception.ApiException;
 import com.leadiq.Stock_api_LeadIQ.model.Stock;
 import com.leadiq.Stock_api_LeadIQ.repository.StockRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,9 @@ public class StockService {
         this.restTemplate = new RestTemplate();
     }
 
+    /**
+     * Fetch stock data from Polygon.io API and store it in the database.
+     */
     public void fetchAndStoreStockData(String companySymbol, String fromDate, String toDate) {
         String url = String.format(
                 "https://api.polygon.io/v2/aggs/ticker/%s/range/1/day/%s/%s?apiKey=%s",
@@ -44,7 +48,7 @@ public class StockService {
             List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
 
             for (Map<String, Object> result : results) {
-              
+                // Polygon returns a timestamp (in milliseconds) for the date
                 Long timestamp = ((Number) result.get("t")).longValue();
                 LocalDate date = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate();
 
@@ -54,12 +58,8 @@ public class StockService {
                 Double lowPrice = ((Number) result.get("l")).doubleValue();
                 Long volume = ((Number) result.get("v")).longValue();
 
-                byte[] id = Stock.generateShortHash(companySymbol, date);
-
-                if (!stockRepository.existsById(id)) {
-                    Stock stock = new Stock(id, companySymbol, date, openPrice, closePrice, highPrice, lowPrice, volume);
-                    stockRepository.save(stock);
-                }
+                Stock stock = new Stock(null, companySymbol, date, openPrice, closePrice, highPrice, lowPrice, volume);
+                stockRepository.save(stock);
             }
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
@@ -71,7 +71,9 @@ public class StockService {
         }
     }
 
-    
+    /**
+     * Retrieve stock data by company symbol and date.
+     */
     public Stock getStockBySymbolAndDate(String companySymbol, String dateStr) {
         LocalDate date = LocalDate.parse(dateStr.trim());
         return stockRepository.findByCompanySymbolAndDate(companySymbol, date)
