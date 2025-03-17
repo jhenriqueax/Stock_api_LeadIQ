@@ -1,16 +1,13 @@
 package com.leadiq.Stock_api_LeadIQ.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import jakarta.persistence.*;
 import java.time.LocalDate;
-
 @Entity
 @Table(name = "stocks")
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class Stock {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,4 +33,14 @@ public class Stock {
     
     @Column(name = "volume")
     private Long volume;
+
+    public Stock(String companySymbol, LocalDate date, Double openPrice, Double closePrice, Double highPrice, Double lowPrice, Long volume) {
+        this.companySymbol = companySymbol;
+        this.date = date;
+        this.openPrice = openPrice;
+        this.closePrice = closePrice;
+        this.highPrice = highPrice;
+        this.lowPrice = lowPrice;
+        this.volume = volume;
+    }
 }
