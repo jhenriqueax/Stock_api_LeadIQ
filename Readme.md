@@ -102,29 +102,71 @@ curl -X GET "http://localhost:8080/stocks/AAPL?date=2025-03-01"
 
 ---
 
-## Installation & Setup
+# Stock API - Installation & Setup
 
-### 1 Set Up MySQL Database
+## Prerequisites
+Before running the project, ensure you have the following installed:
+
+- **Git** (to clone the repository)
+- **MySQL** (if running locally)
+- **Maven** (if running locally)
+- **Docker & Docker Compose** (if running with Docker)
+
+## 1. Clone the Repository
+First, clone the project from GitHub and navigate to the project directory:
+
+```bash
+git clone <repository_url>
+cd <repository_directory>
+```
+
+---
+
+## Option 1: Running Locally
+
+### 2. Install and Configure MySQL
+Make sure MySQL is installed and running. Then, create a new database:
+
 ```sql
 CREATE DATABASE stockdb;
 USE stockdb;
 ```
 
-### 2 Configure `application.properties`
+### 3. Configure `application.properties`
+Update your `src/main/resources/application.properties` file with your MySQL credentials:
+
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/stockdb
-spring.datasource.username=YOUR_USER
-spring.datasource.password=YOUR_PASSWORD
+spring.datasource.username=stock_user
+spring.datasource.password=your_password
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.database-platform=org.hibernate.dialect.MySQL8Dialect
 spring.jpa.show-sql=true
 ```
 
-### 3 Run the Application
+### 4. Run the Application
+Ensure you have Maven installed, then execute:
+
 ```bash
 mvn clean spring-boot:run
 ```
+---
+## Option 2: Running with Docker
 
+### 2. Build and Run the Containers
+Make sure you are in the root directory of the project (where `docker-compose.yml` is located), then run:
+
+```bash
+docker-compose up --build
+```
+
+This will start both the MySQL database and the Spring Boot application inside Docker containers.
+
+### 3. Verify Everything is Running
+To check running containers:
+```bash
+docker ps
+```
 ---
 
 ## Exponential Backoff Retry
