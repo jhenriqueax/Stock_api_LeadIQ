@@ -82,7 +82,7 @@ curl -X POST "http://localhost:8080/stocks/fetch?companySymbol=AAPL&fromDate=202
 
 **Example cURL Request:**
 ```bash
-curl -X GET "http://localhost:8080/stocks/AAPL?date=2025-03-01"
+curl -X GET "http://localhost:8080/stocks/AAPL?date=2025-03-03"
 ```
 
 **Response (DTO Structure):**
