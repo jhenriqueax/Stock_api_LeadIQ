@@ -5,6 +5,8 @@ import com.leadiq.Stock_api_LeadIQ.dto.StockDTO;
 import com.leadiq.Stock_api_LeadIQ.model.Stock;
 import com.leadiq.Stock_api_LeadIQ.repository.StockRepository;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.retry.annotation.Backoff;
@@ -30,9 +32,9 @@ public class StockService {
     private final StockRepository stockRepository;
     private final RestTemplate restTemplate;
 
-    //@Value("${polygon.api.key}")
-    private final String polygonApiKey = "iqTo1lCuGzY_NYlZexLorbfFp6Pt56D3";
-
+    @Value("${polygon.api.key}")
+    private String polygonApiKey;
+    
     public StockService(StockRepository stockRepository) {
         this.stockRepository = stockRepository;
         this.restTemplate = new RestTemplate();
