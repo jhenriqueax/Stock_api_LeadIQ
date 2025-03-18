@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SPRING_APPLICATION_NAME=Stock_api_LeadIQ
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/stockdb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=adminadmin
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop
+      - SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=5
+      - POLYGON_API_KEY=iqTo1lCuGzY_NYlZexLorbfFp6Pt56D3
+
+  db:
+    image: mysql:8
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: stockdb
+      MYSQL_ROOT_PASSWORD: adminadmin
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
