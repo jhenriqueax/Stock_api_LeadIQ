@@ -1,6 +1,6 @@
 package com.leadiq.Stock_api_LeadIQ.controller;
 
-import com.leadiq.Stock_api_LeadIQ.model.Stock;
+import com.leadiq.Stock_api_LeadIQ.dto.StockDTO;
 import com.leadiq.Stock_api_LeadIQ.service.StockService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,9 +25,9 @@ public class StockController {
     }
 
     @GetMapping("/{companySymbol}")
-    public ResponseEntity<Stock> getStock(@PathVariable String companySymbol,
-                                          @RequestParam String date) {
-        Stock stock = stockService.getStockBySymbolAndDate(companySymbol, date);
-        return new ResponseEntity<>(stock, HttpStatus.OK);
+    public ResponseEntity<StockDTO> getStock(@PathVariable String companySymbol,
+                                             @RequestParam String date) {
+        StockDTO stockDTO = stockService.getStockBySymbolAndDate(companySymbol, date);
+        return new ResponseEntity<>(stockDTO, HttpStatus.OK);
     }
 }
