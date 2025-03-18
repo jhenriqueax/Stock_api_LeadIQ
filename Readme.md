@@ -4,9 +4,9 @@
 The Stock API is a **Spring Boot-based RESTful service** that:
 - Fetches stock price data from **Polygon.io API**.
 - Stores the data in a **MySQL database**.
-- Provides endpoints to retrieve stock prices.
-- Uses **SHA-256 (128-bit) hashed IDs** to prevent duplicate records and ensure scalability.
-- Implements error handling for API rate limits and data integrity.
+- Uses **DTOs (Data Transfer Objects)** to structure API responses.
+- Implements **Exponential Backoff Retry** to handle API rate limits.
+- **Supports only one stock record per request**, ensuring data integrity and preventing inconsistencies.
 
 ---
 
@@ -14,9 +14,8 @@ The Stock API is a **Spring Boot-based RESTful service** that:
 - [Technology Stack](#-technology-stack)
 - [Database Schema](#-database-schema)
 - [API Endpoints](#-api-endpoints)
-- [Hash-Based ID Generation](#-hash-based-id-generation)
 - [Installation & Setup](#-installation--setup)
-- [Testing with Postman](#-testing-with-postman)
+- [Exponential Backoff Retry](#-exponential-backoff-retry)
 - [Error Handling](#-error-handling)
 - [Performance Optimization](#-performance-optimization)
 
@@ -27,7 +26,7 @@ The Stock API is a **Spring Boot-based RESTful service** that:
 - **MySQL** (Data Storage)
 - **Hibernate** (ORM Framework)
 - **Polygon.io API** (Stock Market Data Source)
-- **SHA-256 Hashing** (Ensuring Unique IDs)
+- **Spring Retry** (Automatic Retry Mechanism)
 - **JUnit & Spring Boot Test** (Testing)
 
 ---
@@ -36,11 +35,10 @@ The Stock API is a **Spring Boot-based RESTful service** that:
 
 The `stocks` table is structured as follows:
 
-
 | Field            | Type         | Description                          |
 |-----------------|-------------|--------------------------------------|
-| `id`            | `BINARY(16)` | Unique SHA-256 (128-bit) ID         |
-| `company_symbol`| `VARCHAR(10)` | Stock ticker symbol (e.g., AAPL)   |
+| `id`            | `BIGINT` (Auto-increment) | Unique identifier |
+| `company_symbol`| `VARCHAR(10)` | Stock ticker symbol    |
 | `date`          | `DATE`       | Stock price date                    |
 | `open_price`    | `DOUBLE`     | Opening stock price                 |
 | `close_price`   | `DOUBLE`     | Closing stock price                 |
@@ -48,41 +46,46 @@ The `stocks` table is structured as follows:
 | `low_price`     | `DOUBLE`     | Lowest stock price                  |
 | `volume`        | `BIGINT`     | Number of shares traded             |
 
+**The API allows only one record per `company_symbol` and `date`.**  
+If multiple records exist, the GET request will fail.
+
 ---
 
 ## API Endpoints
 
 ### 1 Fetch and Store Stock Data
-**Endpoint:**
-```http
-POST /stocks/fetch
-```
-**Request Parameters:**
+**Endpoint:**  
+`POST /stocks/fetch`
+
+**Request Parameters:**  
 - `companySymbol` (String) – Stock ticker symbol (e.g., `AAPL`)
 - `fromDate` (String, format: `YYYY-MM-DD`)
 - `toDate` (String, format: `YYYY-MM-DD`)
 
-**Example Request:**
-```http
-POST http://localhost:8080/stocks/fetch?companySymbol=AAPL&fromDate=2025-03-01&toDate=2025-03-05
+**Example cURL Request:**
+```bash
+curl -X POST "http://localhost:8080/stocks/fetch?companySymbol=AAPL&fromDate=2025-03-01&toDate=2025-03-05"
 ```
 
 **Response:**
 ```json
-Stock data fetched and stored successfully.
+{
+  "message": "Stock data fetched and stored successfully."
+}
 ```
 
-### 2️ Get Stock Data by Symbol and Date
-**Endpoint:**
-```http
-GET /stocks/{companySymbol}?date=YYYY-MM-DD
-```
-**Example Request:**
-```http
-GET http://localhost:8080/stocks/AAPL?date=2025-03-01
+---
+
+### 2 Get Stock Data by Symbol and Date
+**Endpoint:**  
+`GET /stocks/{companySymbol}?date=YYYY-MM-DD`
+
+**Example cURL Request:**
+```bash
+curl -X GET "http://localhost:8080/stocks/AAPL?date=2025-03-01"
 ```
 
-**Response:**
+**Response (DTO Structure):**
 ```json
 {
   "companySymbol": "AAPL",
@@ -95,27 +98,7 @@ GET http://localhost:8080/stocks/AAPL?date=2025-03-01
 }
 ```
 
----
-
-## Hash-Based ID Generation
-
-To prevent duplicate records, each entry's **ID** is generated using a **SHA-256 hash function** applied to the `companySymbol` and `date`.
-
-**Hash Generation Logic:**
-```java
-public static byte[] generateShortHash(String companySymbol, LocalDate date) {
-    try {
-        String input = companySymbol + date.toString();
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-        byte[] shortHash = new byte[16];
-        System.arraycopy(hash, 0, shortHash, 0, 16);
-        return shortHash;
-    } catch (NoSuchAlgorithmException e) {
-        throw new RuntimeException("Error generating hash", e);
-    }
-}
-```
+**If more than one result is found, the API will return an error.**
 
 ---
 
@@ -127,7 +110,7 @@ CREATE DATABASE stockdb;
 USE stockdb;
 ```
 
-### 2️ Configure `application.properties`
+### 2 Configure `application.properties`
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/stockdb
 spring.datasource.username=YOUR_USER
@@ -137,48 +120,49 @@ spring.jpa.database-platform=org.hibernate.dialect.MySQL8Dialect
 spring.jpa.show-sql=true
 ```
 
-### 3️ Run the Application
+### 3 Run the Application
 ```bash
 mvn clean spring-boot:run
 ```
 
 ---
 
-## 🛠️ Testing with Postman
+## Exponential Backoff Retry
+To handle **rate limiting (HTTP 429 Too Many Requests)** from **Polygon.io**, the system uses **Spring Retry** with exponential backoff.
 
-1. **Fetch and Store Stock Data:**
-   - `POST` → `http://localhost:8080/stocks/fetch?companySymbol=AAPL&fromDate=2025-03-01&toDate=2025-03-05`
-   - Check **MySQL**: `SELECT * FROM stocks;`
+### 🔹 Configuration in Code
+```java
+@Retryable(
+    value = HttpClientErrorException.class,
+    maxAttempts = 7,
+    backoff = @Backoff(delay = 1000, multiplier = 2) // 1s → 2s → 4s → 8s → 16s → 32s → 64s
+)
+```
 
-2. **Retrieve Stock Data:**
-   - `GET` → `http://localhost:8080/stocks/AAPL?date=2025-03-01`
+If the API returns `429 Too Many Requests`, retry will **automatically trigger**.  
+If all retries fail, an error will be thrown.
 
 ---
 
 ## Error Handling
 
-| Error Type              | Description |
-|-------------------------|-------------|
-| `HttpClientErrorException` | Handles API failures (Rate Limit). |
+| Error Type                  | Description |
+|-----------------------------|-------------|
+| `HttpClientErrorException` | Captures API failures (Rate Limit, Not Found, etc.). |
+| `IncorrectResultSizeDataAccessException` | Thrown when multiple results are found for a unique query. |
 | `DateTimeParseException`  | Handles incorrect date formats. |
-| `DuplicateKeyException`   | Prevents duplicate stock entries. |
-| `IllegalArgumentException` | Handles invalid input parameters. |
+| `IllegalArgumentException` | Thrown when invalid parameters are received. |
 
 ---
 
 ## Performance Optimization
 
-### 1️ Bulk Inserts to Improve Efficiency
-Using `saveAll()` for batch inserts:
+### 1 Batch Inserts to Improve Efficiency
+The API uses **`saveAll()`** to optimize bulk inserts:
+
 ```java
-List<Stock> stocksToSave = new ArrayList<>();
-for (Map<String, Object> result : results) {
-    Stock stock = new Stock(companySymbol, date, openPrice, closePrice, highPrice, lowPrice, volume);
-    stocksToSave.add(stock);
-}
-stockRepository.saveAll(stocksToSave);
+stockRepository.saveAll(stocks);
 ```
+**This reduces the number of database calls, improving performance.**
 
-## Conclusion
-This Stock API is **optimized for scalability**, ensures **data integrity using hash-based IDs**, and efficiently handles **large-scale stock data fetching**. 🚀
-
+---
