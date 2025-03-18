@@ -66,7 +66,7 @@ public class StockService {
                                         .atZone(ZoneId.systemDefault())
                                         .toLocalDate();
 
-                stocks.add(new Stock(null, companySymbol, date, 
+                stocks.add(new Stock(companySymbol, date, 
                                     result.getOpenPrice(), result.getClosePrice(),
                                     result.getHighPrice(), result.getLowPrice(), result.getVolume()));
             }
